@@ -7,6 +7,7 @@
 //
 
 #include "srt.h"
+#include "debug.h"
 #include "stream.h"
 
 typedef enum {
@@ -22,13 +23,13 @@ typedef enum {
 
 typedef struct {
     char number[MAX_NUMBER_SIZE];
-    char number_len;
+    int number_len;
     char time[MAX_TIME_SIZE];
-    char time_len;
+    int time_len;
     char text[MAX_TEXT_SIZE];
-    char text_len;
+    int text_len;
     char blank[MAX_BLANK_SIZE];
-    char blank_len;
+    int blank_len;
 } block_t;
 
 int __str2time(const char* str, float* t1, float* t2)
@@ -79,7 +80,7 @@ BOOL __is_number(const char* str)
 
     for(i = 0; i < len; i++)
     {
-        if ('\r' == str[i] || '\n' == str[i])
+        if ('\r' == str[i] || '\n' == str[i] || ' ' == str[i])
             break;
 
         if ('0' > str[i] || '9' < str[i])
@@ -163,193 +164,193 @@ int __read_block(readln_func_t readln, FILE* fp, block_t* blockp)
                 return NOERR;
             }
 
-            blockp->text_len += ret;
-            ptext += ret;
-            break;
-        }
-    }
-}
+             blockp->text_len += ret;
+             ptext += ret;
+             break;
+         }
+     }
+ }
 
-// return : -1 or NOERR
-int __write_block(writeln_func_t writeln, FILE* fp, block_t* blockp)
-{
-    int ret = 0;
+ // return : -1 or NOERR
+ int __write_block(writeln_func_t writeln, FILE* fp, block_t* blockp)
+ {
+     int ret = 0;
 
-    //trace("number: %s", blockp->number);
-    ret = writeln(fp, blockp->number, blockp->number_len);
-    return_val_if_fail(ret >= 0, -1);
+     //trace("number: %s", blockp->number);
+     ret = writeln(fp, blockp->number, blockp->number_len);
+     return_val_if_fail(ret >= 0, -1);
 
-    //trace("time: %s", blockp->time);
-    ret = writeln(fp, blockp->time, blockp->time_len);
-    return_val_if_fail(ret >= 0, -1);
+     //trace("time: %s", blockp->time);
+     ret = writeln(fp, blockp->time, blockp->time_len);
+     return_val_if_fail(ret >= 0, -1);
 
-    //trace("text: %s", blockp->text);
-    ret = writeln(fp, blockp->text, blockp->text_len);
-    return_val_if_fail(ret >= 0, -1);
+     //trace("text: %s", blockp->text);
+     ret = writeln(fp, blockp->text, blockp->text_len);
+     return_val_if_fail(ret >= 0, -1);
 
-    //trace("blank: %s", blockp->blank);
-    ret = writeln(fp, blockp->blank, blockp->blank_len);
-    return_val_if_fail(ret >= 0, -1);
+     //trace("blank: %s", blockp->blank);
+     ret = writeln(fp, blockp->blank, blockp->blank_len);
+     return_val_if_fail(ret >= 0, -1);
 
-    return NOERR;
-}
+     return NOERR;
+ }
 
-int srt_delay(void* opt)
-{
-    delay_option_t* op = NULL;
-    stream_t si, so;
-    float t1, t2;
-    block_t block;
-    int err = NOERR;
+ int srt_delay(void* opt)
+ {
+     delay_option_t* op = NULL;
+     stream_t si, so;
+     float t1, t2;
+     block_t block;
+     int err = NOERR;
 
-    return_val_if_fail(opt, -1);
-    op = (delay_option_t*)opt;
+     return_val_if_fail(opt, -1);
+     op = (delay_option_t*)opt;
 
-    if (NOERR == (err = stream_init(&si, op->input_type, op->finput))
-        && NOERR == (err = stream_init(&so, op->output_type, op->foutput)))
-    {
-        while(1)
-        {
-            memset(&block, 0x00, sizeof(block_t));
+     if (NOERR == (err = stream_init(&si, op->input_type, op->finput))
+         && NOERR == (err = stream_init(&so, op->output_type, op->foutput)))
+     {
+         while(1)
+         {
+             memset(&block, 0x00, sizeof(block_t));
 
-            // read block
+             // read block
 
-            if (NOERR != (err = __read_block(si.readln, si.file, &block)))
-            {
-                trace("%s", "read block err");
-                break;
-            }
+             if (NOERR != (err = __read_block(si.readln, si.file, &block)))
+             {
+                 trace("%s", "read block err");
+                 break;
+             }
 
-            if (block.number_len <= 0)
-                break; // file end
-            
-            if (NOERR != (err = __str2time(block.time, &t1, &t2)))
-            {
-                trace("%s", "parse time err");
-                break;
-            }
+             if (block.number_len <= 0)
+                 break; // file end
 
-            // set time
+             if (NOERR != (err = __str2time(block.time, &t1, &t2)))
+             {
+                 trace("%s", "parse time err");
+                 break;
+             }
 
-            t1 += op->delay_time;
-            t2 += op->delay_time;
-            __time2str(block.time, t1, t2);
-            block.time_len = strlen(block.time);
+             // set time
 
-            // write block
+             t1 += op->delay_time;
+             t2 += op->delay_time;
+             __time2str(block.time, t1, t2);
+             block.time_len = strlen(block.time);
 
-            if (NOERR != (err = __write_block(so.writeln, so.file, &block)))
-            {
-                trace("%s", "write block err");
-                break;
-            }
-        }
-    }
+             // write block
 
-    stream_free(&si);
-    stream_free(&so);
+             if (NOERR != (err = __write_block(so.writeln, so.file, &block)))
+             {
+                 trace("%s", "write block err");
+                 break;
+             }
+         }
+     }
 
-	return err;
-}
+     stream_free(&si);
+     stream_free(&so);
 
-int srt_split(void* opt)
-{
-    split_option_t* opp = NULL;
-    stream_t si, so1, so2;
-    float t1, t2;
-    int line_number = 1;
-    block_t block;
-    int err = NOERR;
+     return err;
+ }
 
-    return_val_if_fail(opt, -1);
-    opp = (split_option_t*)opt;
+ int srt_split(void* opt)
+ {
+     split_option_t* opp = NULL;
+     stream_t si, so1, so2;
+     float t1, t2;
+     int line_number = 1;
+     block_t block;
+     int err = NOERR;
 
-    if (NOERR == (err = stream_init(&si, opp->input_type, opp->finput))
-        && NOERR == (err =  stream_init(&so1, opp->output1_type, opp->foutput1))
-        && NOERR == (err = stream_init(&so2, opp->output2_type, opp->foutput2)))
-    {
-        while(1)
-        {
-            memset(&block, 0x00, sizeof(block_t));
+     return_val_if_fail(opt, -1);
+     opp = (split_option_t*)opt;
 
-            // read block
+     if (NOERR == (err = stream_init(&si, opp->input_type, opp->finput))
+         && NOERR == (err =  stream_init(&so1, opp->output1_type, opp->foutput1))
+         && NOERR == (err = stream_init(&so2, opp->output2_type, opp->foutput2)))
+     {
+         while(1)
+         {
+             memset(&block, 0x00, sizeof(block_t));
 
-            if (NOERR != (err =__read_block(si.readln, si.file, &block)))
-            {
-                trace("%s", "read block err");
-                break;
-            }
+             // read block
 
-            if (block.number_len <= 0)
-                break; // file end
+             if (NOERR != (err =__read_block(si.readln, si.file, &block)))
+             {
+                 trace("%s", "read block err");
+                 break;
+             }
 
-            if (NOERR != (err = __str2time(block.time, &t1, &t2)))
-            {
-                trace("%s", "parse time err");
-                break;
-            }
+             if (block.number_len <= 0)
+                 break; // file end
 
-            // write blocks
+             if (NOERR != (err = __str2time(block.time, &t1, &t2)))
+             {
+                 trace("%s", "parse time err");
+                 break;
+             }
 
-            if (t1 < opp->split_time)
-            {
-                // part1
-                // no need change
-                if (NOERR != (err = __write_block(so1.writeln, so1.file, &block)))
-                {
-                    trace("%s", "write block err (part1)");
-                    break;
-                }   
-            }
-            else
-            {
-                // part2
-                // set time & line number
-                __time2str(block.time, t1 - opp->split_time, t2 - opp->split_time);
-                block.time_len = strlen(block.time);
+             // write blocks
 
-                sprintf(block.number, "%d\n", line_number++);
-                block.number_len = strlen(block.number);
+             if (t1 < opp->split_time)
+             {
+                 // part1
+                 // no need change
+                 if (NOERR != (err = __write_block(so1.writeln, so1.file, &block)))
+                 {
+                     trace("%s", "write block err (part1)");
+                     break;
+                 }   
+             }
+             else
+             {
+                 // part2
+                 // set time & line number
+                 __time2str(block.time, t1 - opp->split_time, t2 - opp->split_time);
+                 block.time_len = strlen(block.time);
 
-                if (NOERR != (err = __write_block(so2.writeln, so2.file, &block)))
-                {
-                    trace("%s", "write block err (part2)");
-                    break;
-                }       
-            }
-        }
-    }
+                 sprintf(block.number, "%d\n", line_number++);
+                 block.number_len = strlen(block.number);
 
-    stream_free(&si);
-    stream_free(&so1);
-    stream_free(&so2);
+                 if (NOERR != (err = __write_block(so2.writeln, so2.file, &block)))
+                 {
+                     trace("%s", "write block err (part2)");
+                     break;
+                 }       
+             }
+         }
+     }
 
-	return err;
-}
+     stream_free(&si);
+     stream_free(&so1);
+     stream_free(&so2);
 
-int srt_cat(void* opt)
-{
-    cat_option_t* opp = NULL;
-    stream_t si1, si2, so;
-    block_t block;
-    float t1 = -1.0f, t2 = -1.0f, time_delay;
-    int line_number = 1;
-    int err = NOERR;
+     return err;
+ }
 
-    return_val_if_fail(opt, -1);
-    opp = (cat_option_t*)opt;
+ int srt_cat(void* opt)
+ {
+     cat_option_t* opp = NULL;
+     stream_t si1, si2, so;
+     block_t block;
+     float t1 = -1.0f, t2 = -1.0f, time_delay;
+     int line_number = 1;
+     int err = NOERR;
 
-    if (NOERR == (err = stream_init(&si1, opp->input1_type, opp->finput1))
-        && NOERR == (err = stream_init(&si2, opp->input2_type, opp->finput2))
-        && NOERR == (err = stream_init(&so, opp->output_type, opp->foutput)))
-    {
-        while(1)
-        {
-            memset(&block, 0x00, sizeof(block_t));
+     return_val_if_fail(opt, -1);
+     opp = (cat_option_t*)opt;
 
-            // read block
+     if (NOERR == (err = stream_init(&si1, opp->input1_type, opp->finput1))
+         && NOERR == (err = stream_init(&si2, opp->input2_type, opp->finput2))
+         && NOERR == (err = stream_init(&so, opp->output_type, opp->foutput)))
+     {
+         while(1)
+         {
+             memset(&block, 0x00, sizeof(block_t));
 
-            if (NOERR != (err = __read_block(si1.readln, si1.file, &block)))
+             // read block
+
+             if (NOERR != (err = __read_block(si1.readln, si1.file, &block)))
             {
                 trace("%s", "readblock err [file 1]");
                 break;

@@ -32,22 +32,6 @@
 #define TRUE 1
 #define FALSE 0
 
-#define return_if_fail(p) if(!(p))                                      \
-    {                                                                   \
-        printf("%s:%d Warning: "#p" failed.\n",  __func__, __LINE__);   \
-        return;                                                         \
-    }
-
-#define return_val_if_fail(p, ret) if(!(p))                             \
-    {                                                                   \
-        printf("%s:%d Warning: "#p" failed.\n", __func__, __LINE__);    \
-        return (ret);                                                   \
-    }
-
-
-#define trace(format, args...)                                     \
-    printf("[%s:%d] %s() "format"\n", __FILE__, __LINE__, __func__, args)
-
 typedef int (*readln_func_t) (FILE* fp, char* buf, int size);
 typedef int (*writeln_func_t) (FILE* fp, char* data, int len);
 

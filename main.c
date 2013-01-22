@@ -8,6 +8,7 @@
 
 #include <getopt.h>
 #include "typedef.h"
+#include "debug.h"
 #include "stream.h"
 #include "srt.h"
 
@@ -65,9 +66,9 @@ char* get_format(const char* filename)
     return (strrchr(filename, '.') + 1);
 }
 
-void useage(char* appname)
+void usage(char* appname)
 {
-    printf("\nUseage: %s [-t <time>] [-f <format>] [-<action>] file...\n\
+    printf("\nUsage: %s [-t <time>] [-f <format>] [-<action>] file...\n\
 Time:\n\
     -t <time>       hh:mm:ss,fff or ss.fff\n\
 Format:\n\
@@ -78,7 +79,7 @@ Action:\n\
     -c 	            cat\n\
     -m 	            mix\n\
 Example:\n\
-    %s -t 12.345 -f srt -d input.srt output.srt\n", appname, appname);
+    %s -t 12.345 -f srt -d input.srt output.srt\n\n", appname, appname);
 }
 
 int main(int argc, char** argv)
@@ -94,7 +95,7 @@ int main(int argc, char** argv)
 
     if (argc <= 1)
     {
-        useage(argv[0]);
+        usage(argv[0]);
         return -1;
     }
 
@@ -257,7 +258,7 @@ int main(int argc, char** argv)
         break;
 
         default:
-            useage(argv[0]);
+            usage(argv[0]);
             return __LINE__;
         }
     }
@@ -267,14 +268,14 @@ int main(int argc, char** argv)
 	if (NULL == proc)
     {
         printf("unknow format:'%s'\n", fmt);
-        useage(argv[0]);
+        usage(argv[0]);
         return __LINE__;
     }
     
     if (NULL == subopt)
     {
         printf("requires -<action> option\n");
-        useage(argv[0]);
+        usage(argv[0]);
         return __LINE__;
     }
     
@@ -294,10 +295,11 @@ int main(int argc, char** argv)
         break;
     default:
         trace("unknow action:'%d'", act);
+        err = -1;
     }
 
     if (err != NOERR)
         printf("err:%d, fmt:%s, act:%d\n", err, fmt, act);
 
-	return err;
+    return err;
 }
