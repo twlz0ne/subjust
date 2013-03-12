@@ -4,17 +4,17 @@ PREFIX_BIN = /usr/local/bin
 CC = gcc
 INCLUDES =
 LIBS =
-CFLAGS =-Wall -Werror
-LINKFLAGS = 
+CFLAGS = -Wall -Werror
+LINKFLAGS =
 
 C_SOURCES = $(wildcard *.c)
 C_OBJS = $(patsubst %.c, %.o, $(C_SOURCES))
 
-.c.o:
+%.o:%.c
 	$(CC) -c -o $*.o $(CFLAGS) $(INCLUDES) $*.c
 
 compile: $(C_OBJS)
-	$(CC)     $(LINKFLAGS) -o $(TARGET) $^ $(LIBS)
+	$(CC) $(LINKFLAGS) -o $(TARGET) $^ $(LIBS)
 
 clean:
 	rm -f $(C_OBJS)

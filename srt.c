@@ -195,6 +195,15 @@ int __read_block(readln_func_t readln, FILE* fp, block_t* blockp)
      return NOERR;
  }
 
+int __trace_block(block_t *block)
+{
+    return_val_if_fail(block != NULL, -1);
+    printf("number: len = %d, str = %s\n", block->number_len, block->number);
+    printf("  time: len = %d, str = %s\n", block->time_len, block->time);
+    printf("  text: len = %d, str = %s\n", block->text_len, block->text);
+    return NOERR;
+}
+
  int srt_delay(void* opt)
  {
      delay_option_t* op = NULL;
@@ -430,8 +439,9 @@ int srt_mix(void* opt)
 {
     mix_option_t* op = NULL;
     stream_t si1, si2, so;
-    block_t block1, block2;
-    int number1, number2, err = NOERR;
+    block_t block1, block2, *p_block_write = NULL;
+    int number = 1, err = NOERR;
+    int is_block1_suspend = 0, is_block2_suspend = 0;
 
     return_val_if_fail(opt, -1);
     op = (mix_option_t*)opt;
@@ -442,51 +452,91 @@ int srt_mix(void* opt)
     {
         while(1)
         {
-            memset(&block1, 0x00, sizeof(block_t));
-            memset(&block2, 0x00, sizeof(block_t));
-            
             // read blocks
 
-            if (NOERR != (err = __read_block(si1.readln, si1.file, &block1)))
+            if (!is_block1_suspend)
             {
-                trace("%s", "readblock err [file 1]");
-                break;
+                memset(&block1, 0x00, sizeof(block_t));
+
+                if (NOERR != (err = __read_block(si1.readln, si1.file, &block1)))
+                {
+                    trace("%s", "readblock err [file 1]");
+                    break;
+                }
+
             }
 
-            if (block1.number_len <= 0)
-                break; // file end
-
-            if (NOERR != (err = __read_block(si2.readln, si2.file, &block2)))
+            if (!is_block2_suspend)
             {
-                trace("%s", "readblock err [file 2]");
-                break;
+                memset(&block2, 0x00, sizeof(block_t));
+
+                if (NOERR != (err = __read_block(si2.readln, si2.file, &block2)))
+                {
+                    trace("%s", "readblock err [file 2]");
+                    break;
+                }
+
             }
 
-            if (block2.number_len <= 0)
+            if (block2.number_len <= 0 && block2.number_len <= 0)
                 break; // file end
 
             // mix blocks
 
-            number1 = -1;
-            number2 = -1;
-            sscanf(block1.number, "%d", &number1);
-            sscanf(block2.number, "%d", &number2);
-            if (number1 != -1 && number1 != number2)
+            if (block1.number_len > 0 && block2.number_len > 0)
             {
-                err = -1;
-                trace("number err, file1:%d, file2:%d", number1, number2);
+                int tcmp = strncmp(block1.time, block2.time, strlen("hh:mm:ss,fff"));
+
+                if (tcmp == 0)
+                {
+                    is_block1_suspend = 0;
+                    is_block2_suspend = 0;
+                    strcat(block1.text, block2.text);
+                    block1.text_len = strlen(block1.text);
+                    sprintf(block1.number, "%d\n", number);
+                    p_block_write = &block1;
+                }
+                else if (tcmp > 0)
+                {
+                    is_block1_suspend = 1;
+                    is_block2_suspend = 0;
+                    sprintf(block2.number, "%d\n", number);
+                    p_block_write = &block2;
+                }
+                else
+                {
+                    is_block1_suspend = 0;
+                    is_block2_suspend = 1;
+                    sprintf(block1.number, "%d\n", number);
+                    p_block_write = &block1;
+                }
+            }
+            else if (block1.number_len > 0 && block2.number_len <= 0)
+            {
+                is_block1_suspend = 0;
+                sprintf(block1.number, "%d\n", number);
+                p_block_write = &block1;
+            }
+            else if (block1.number_len <= 0 && block2.number_len > 0)
+            {
+                is_block2_suspend = 0;
+                sprintf(block2.number, "%d\n", number);
+                p_block_write = &block2;
+            }
+            else
+            {
                 break;
             }
-            strcat(block1.text, block2.text);
-            block1.text_len = strlen(block1.text);
 
             // write block
 
-            if (NOERR != (err = __write_block(so.writeln, so.file, &block1)))
+            if (NOERR != (err = __write_block(so.writeln, so.file, p_block_write)))
             {
                 trace("%s", "write block err");
                 break;
             }
+
+            number++;
         }
     }
 

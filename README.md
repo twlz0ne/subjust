@@ -8,7 +8,7 @@ a simple command line tool for subtitle adjustment.
 ## 命令格式
 
     $ ./subjust
-    Useage: ./a.out [-t <time>] [-f <format>] [-<action>] file...
+    Usage: ./a.out [-t <time>] [-f <format>] [-<action>] file...
     Time:
         -t <time>       hh:mm:ss,fff or ss.fff
     Format:
@@ -43,4 +43,4 @@ a simple command line tool for subtitle adjustment.
 
     $ ./subjust -f srt -m input.chs.srt input.eng.srt ouput.mix.srt
 
-用来混合不同语言的字幕，输入的两个文件行号必须一致，时间以第一个文件为准。
+用来混合不同语言的字幕。考虑到两种语言的字幕可能出现不对等的情况，针对相同时间的字幕进行处理，只出现在一边的字幕原样输出，所以，最终得到的字幕条数可能比源文件多。
