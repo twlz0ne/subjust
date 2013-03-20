@@ -8,7 +8,7 @@ a simple command line tool for subtitle adjustment.
 ## 命令格式
 
     $ ./subjust
-    Usage: ./a.out [-t <time>] [-f <format>] [-<action>] file...
+    Usage: ./subjust [-t <time>] [-f <format>] [-<action>] file...
     Time:
         -t <time>       hh:mm:ss,fff or ss.fff
     Format:
