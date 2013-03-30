@@ -2,12 +2,17 @@ TARGET = subjust
 PREFIX_BIN = /usr/local/bin
 
 CC = gcc
-INCLUDES =
+
+INCLUDES = \
+	-I src \
+	-I src/common \
+	-I src/processor
+
 LIBS =
 CFLAGS = -Wall -Werror
 LINKFLAGS =
 
-C_SOURCES = $(wildcard *.c)
+C_SOURCES = $(shell find . -name '*.c') 
 C_OBJS = $(patsubst %.c, %.o, $(C_SOURCES))
 
 %.o:%.c
